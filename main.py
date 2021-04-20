@@ -9,6 +9,17 @@ smoker = {'no': 0, 'yes': 1}
 region = {'southwest': 0, 'southeast': 1, 'northwest': 2, 'northeast': 3}
 
 
+def normalize(df):
+    result = df.copy()
+
+    for feature in df.columns:
+        maxValue = df[feature].max()
+        minValue = df[feature].min()
+        result[feature] = (df[feature] - minValue) / (maxValue - minValue)
+
+    return result
+
+
 def filterData(data):
     data['smoker'] = [smoker[item] for item in data['smoker']]
     data['sex'] = [sex[item] for item in data['sex']]
@@ -19,15 +30,16 @@ def filterData(data):
 
 
 data = filterData(data)
+data = normalize(data)
 
-x = data[['age', 'sex', 'bmi', 'children', 'smoker']]
+x = data[['age', 'bmi', 'children']]
 x.insert(0, 'coefficient', np.ones(len(data.index)))
 y = data['charges']
 
 theta = np.zeros(len(x.columns))
 
-alpha = 0.00003
-iters = 1000
+alpha = 0.0006
+iters = 3000
 
 
 def getMSE(x, y, theta):
@@ -47,7 +59,7 @@ def gradientDescent(x, y, theta, alpha, iters):
         gradient = 0
         for j in range(len(theta)):
             for m in range(len(x)):
-                gradient += loss[m] - x[m][j]
+                gradient += loss[m] * x[m][j]
             theta[j] -= (alpha/len(x)) * gradient
 
         cost.append(getMSE(x, y, theta))
@@ -62,6 +74,5 @@ theta = np.array(theta).T
 MSE = getMSE(x, y, theta)
 theta, cost = gradientDescent(x, y, theta, alpha, iters)
 
-print(theta)
 plt.plot(list(range(iters)), cost, '-r')
 plt.show()
