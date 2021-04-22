@@ -1,36 +1,35 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 data = pd.read_csv('./data.csv')
 
 smoker = {'no': 0, 'yes': 1}
 
 
-def filterData(data):
-    data = pd.get_dummies(data, columns=["sex", "region"], prefix=["sex", "region"])
+def filterData(df):
+    df = pd.get_dummies(df, columns=['children', 'sex', 'region'], prefix=['children', 'sex', 'region'])
 
-    data['smoker'] = [smoker[item] for item in data['smoker']]
-    data['charges'] = [round(item, 2) for item in data['charges']]
+    df['smoker'] = [smoker[item] for item in df['smoker']]
+    df['charges'] = [round(item, 2) for item in df['charges']]
 
-    return data
+    return df
 
 
-def normalize(df):
-    result = df.copy()
-
+def normalizeData(df):
     for feature in df.columns:
         maxValue = df[feature].max()
         minValue = df[feature].min()
-        result[feature] = (df[feature] - minValue) / (maxValue - minValue)
+        df[feature] = (df[feature] - minValue) / (maxValue - minValue)
 
-    return result
+    return df
 
 
 def getMSE(x, y, theta):
-    predY = np.sum(x * theta, 1)
+    y_pred = np.sum(x * theta, 1)
     meanSquare = np.power((predY - y), 2)
-    MSE = np.sum(meanSquare) / (2 * len(x))
+    MSE = np.sum(meanSquare) / len(x)
 
     return MSE
 
@@ -39,36 +38,64 @@ def gradientDescent(x, y, theta, alpha, iters):
     cost = []
 
     for iteration in range(iters):
-        predY = np.sum(x * theta, 1)
-        loss = predY - y
+        y_pred = np.sum(x * theta, 1)
+        loss = y_pred - y
         for j in range(len(theta)):
             gradient = 0
             for m in range(len(x)):
                 gradient += loss[m] * x[m][j]
             theta[j] -= (alpha/len(x)) * gradient
 
-        print(getMSE(x, y, theta))
         cost.append(getMSE(x, y, theta))
 
     return theta, cost
 
 
+def testModel(x, y, theta):
+    y_pred = np.sum(x * theta, 1)
+    df = {'y_pred': y_pred, 'y': y}
+    df = pd.DataFrame(df)
+
+    return df
+
+
+def getSumSquareError(x, y, theta):
+    y_pred = np.sum(x * theta, 1)
+    SSres = np.sum(np.power((y_pred - y), 2))
+
+    return SSres
+
+
+def getSumSquareTotal(y):
+    SStot = np.sum(np.power(y - y.mean(), 2))
+
+    return SStot
+
+
 data = filterData(data)
-data = normalize(data)
+data = normalizeData(data)
 
 x = data.loc[:, data.columns != 'charges']
 x.insert(0, 'coefficient', np.ones(len(data.index)))
 y = data['charges']
 theta = np.zeros(len(x.columns))
 
-alpha = 0.001
-iters = 3000
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
 
-x = np.array(x)
-y = np.array(y)
+alpha = 0.003
+iters = 10000
+
+x_train = np.array(x_train)
+y_train = np.array(y_train)
+x_test = np.array(x_test)
+y_test = np.array(y_test)
 theta = np.array(theta).T
 
-theta, cost = gradientDescent(x, y, theta, alpha, iters)
+theta, cost = gradientDescent(x_train, y_train, theta, alpha, iters)
+result = testModel(x_test, y_test, theta)
 
 plt.plot(list(range(iters)), cost, '-r')
 plt.show()
+
+R_square = 1 - (getSumSquareError(x_test, y_test, theta)/getSumSquareTotal(y_test))
+print(R_square)
