@@ -28,7 +28,7 @@ def normalizeData(df):
 
 def getMSE(x, y, theta):
     y_pred = np.sum(x * theta, 1)
-    meanSquare = np.power((predY - y), 2)
+    meanSquare = np.power((y_pred - y), 2)
     MSE = np.sum(meanSquare) / len(x)
 
     return MSE
@@ -95,7 +95,9 @@ theta, cost = gradientDescent(x_train, y_train, theta, alpha, iters)
 result = testModel(x_test, y_test, theta)
 
 plt.plot(list(range(iters)), cost, '-r')
+plt.xlabel("Number of iterations")
+plt.ylabel("Cost")
 plt.show()
 
 R_square = 1 - (getSumSquareError(x_test, y_test, theta)/getSumSquareTotal(y_test))
-print(R_square)
+print('R-square of the model is: ' + str(R_square))
